@@ -55,7 +55,7 @@ def run_test(test_name, test_func):
 
 def test_root_endpoint():
     """Test the root endpoint"""
-    response = requests.get(f"{BASE_URL}/")
+    response = requests.get(f"{API_URL}/")
     print(f"Status Code: {response.status_code}")
     
     try:
