@@ -32,23 +32,27 @@ tests_passed = 0
 tests_failed = 0
 test_results = []
 
-def run_test(test_name, test_func):
+def run_test(test_name, test_func, silent=False):
     global tests_passed, tests_failed
-    print(f"\n===== Testing: {test_name} =====")
+    if not silent:
+        print(f"\n===== Testing: {test_name} =====")
     try:
         result = test_func()
         if result:
-            print(f"✅ PASS: {test_name}")
+            if not silent:
+                print(f"✅ PASS: {test_name}")
             tests_passed += 1
             test_results.append({"name": test_name, "status": "PASS"})
             return True
         else:
-            print(f"❌ FAIL: {test_name}")
+            if not silent:
+                print(f"❌ FAIL: {test_name}")
             tests_failed += 1
             test_results.append({"name": test_name, "status": "FAIL"})
             return False
     except Exception as e:
-        print(f"❌ ERROR: {test_name} - {str(e)}")
+        if not silent:
+            print(f"❌ ERROR: {test_name} - {str(e)}")
         tests_failed += 1
         test_results.append({"name": test_name, "status": "ERROR", "message": str(e)})
         return False
