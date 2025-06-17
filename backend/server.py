@@ -1,75 +1,135 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, List
 import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
-import uuid
 from datetime import datetime
 
+app = FastAPI(title="FluxWare API", description="Premium Gaming Tools API", version="1.0.0")
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
-
-# Create the main app without a prefix
-app = FastAPI()
-
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
-
-
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
-
-# Include the router in the main app
-app.include_router(api_router)
-
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Models
+class Product(BaseModel):
+    id: str
+    name: str
+    description: str
+    weekly_price: float
+    monthly_price: float
+    features: List[str]
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+class ContactRequest(BaseModel):
+    product_name: str
+    pricing_type: str  # "weekly" or "monthly"
+    user_email: Optional[str] = None
+    message: Optional[str] = None
+
+# In-memory product data (in a real app, this would be in a database)
+PRODUCTS = [
+    {
+        "id": "temp-spoofer",
+        "name": "Temp Spoofer",
+        "description": "Resets on restart - Budget-friendly option for temporary identity masking",
+        "weekly_price": 5.0,
+        "monthly_price": 15.0,
+        "features": ["Temporary protection", "Easy to use", "Budget-friendly", "Quick setup"]
+    },
+    {
+        "id": "perm-spoofer",
+        "name": "Perm Spoofer",
+        "description": "Survives reboot and supports automatic updates for continuous protection",
+        "weekly_price": 15.0,
+        "monthly_price": 40.0,
+        "features": ["Permanent protection", "Survives restarts", "Auto-updates", "Advanced features"]
+    },
+    {
+        "id": "fortnite-cheat",
+        "name": "Fortnite Public Cheat",
+        "description": "Complete Fortnite enhancement suite with aimbot, ESP, anti-ban protection",
+        "weekly_price": 10.0,
+        "monthly_price": 30.0,
+        "features": ["Aimbot system", "ESP/Wallhacks", "Anti-ban protection", "Regular updates"]
+    }
+]
+
+@app.get("/")
+async def root():
+    return {
+        "message": "FluxWare API is running",
+        "status": "active",
+        "version": "1.0.0",
+        "discord": "https://discord.gg/x2n3b6teqw",
+        "contact": "doddggy@mail.io"
+    }
+
+@app.get("/api/products")
+async def get_products():
+    """Get all available products"""
+    return {"products": PRODUCTS}
+
+@app.get("/api/products/{product_id}")
+async def get_product(product_id: str):
+    """Get a specific product by ID"""
+    product = next((p for p in PRODUCTS if p["id"] == product_id), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"product": product}
+
+@app.post("/api/contact/purchase")
+async def contact_for_purchase(request: ContactRequest):
+    """Submit a purchase inquiry"""
+    # Validate product exists
+    product = next((p for p in PRODUCTS if p["name"].lower() in request.product_name.lower()), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # In a real application, you would:
+    # 1. Store the inquiry in a database
+    # 2. Send an email notification
+    # 3. Log the interaction
+    
+    contact_info = {
+        "email": "doddggy@mail.io",
+        "discord": "https://discord.gg/x2n3b6teqw",
+        "discord_server": "FluxWare Official"
+    }
+    
+    return {
+        "message": "Purchase inquiry received",
+        "product": request.product_name,
+        "pricing": request.pricing_type,
+        "contact_methods": contact_info,
+        "instructions": "Please contact us via email or Discord to complete your purchase. Include the product name and pricing option in your message."
+    }
+
+@app.get("/api/contact")
+async def get_contact_info():
+    """Get contact information"""
+    return {
+        "email": "doddggy@mail.io",
+        "discord": "https://discord.gg/x2n3b6teqw",
+        "discord_server": "FluxWare Official",
+        "support_hours": "24/7 Discord Support"
+    }
+
+@app.get("/api/stats")
+async def get_stats():
+    """Get site statistics"""
+    return {
+        "active_users": "1000+",
+        "uptime": "99.9%",
+        "support": "24/7",
+        "products": len(PRODUCTS),
+        "last_updated": datetime.now().isoformat()
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
