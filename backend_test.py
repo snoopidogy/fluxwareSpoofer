@@ -55,33 +55,36 @@ def run_test(test_name, test_func):
 
 def test_root_endpoint():
     """Test the root endpoint"""
-    response = requests.get(BASE_URL)
+    response = requests.get(f"{BASE_URL}/")
     print(f"Status Code: {response.status_code}")
-    if response.status_code != 200:
-        print(f"Failed with status code: {response.status_code}")
-        return False
     
-    data = response.json()
-    print("Response:")
-    pprint(data)
-    
-    # Check required fields
-    required_fields = ["message", "status", "version", "discord", "contact"]
-    for field in required_fields:
-        if field not in data:
-            print(f"Missing required field: {field}")
+    try:
+        data = response.json()
+        print("Response:")
+        pprint(data)
+        
+        # Check required fields
+        required_fields = ["message", "status", "version", "discord", "contact"]
+        for field in required_fields:
+            if field not in data:
+                print(f"Missing required field: {field}")
+                return False
+        
+        # Check specific values
+        if data["contact"] != "doddggy@mail.io":
+            print(f"Incorrect contact email. Expected 'doddggy@mail.io', got '{data['contact']}'")
             return False
-    
-    # Check specific values
-    if data["contact"] != "doddggy@mail.io":
-        print(f"Incorrect contact email. Expected 'doddggy@mail.io', got '{data['contact']}'")
+        
+        if data["discord"] != "https://discord.gg/x2n3b6teqw":
+            print(f"Incorrect Discord link. Expected 'https://discord.gg/x2n3b6teqw', got '{data['discord']}'")
+            return False
+        
+        return True
+    except Exception as e:
+        print(f"Error parsing response: {e}")
+        print("Raw response content:")
+        print(response.text[:500])  # Print first 500 chars of response
         return False
-    
-    if data["discord"] != "https://discord.gg/x2n3b6teqw":
-        print(f"Incorrect Discord link. Expected 'https://discord.gg/x2n3b6teqw', got '{data['discord']}'")
-        return False
-    
-    return True
 
 def test_products_list():
     """Test the products list endpoint"""
