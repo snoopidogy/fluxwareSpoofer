@@ -55,7 +55,7 @@ def run_test(test_name, test_func):
 
 def test_root_endpoint():
     """Test the root endpoint"""
-    response = requests.get(f"{API_URL}/")
+    response = requests.get(f"{BASE_URL}")
     print(f"Status Code: {response.status_code}")
     
     try:
@@ -84,7 +84,26 @@ def test_root_endpoint():
         print(f"Error parsing response: {e}")
         print("Raw response content:")
         print(response.text[:500])  # Print first 500 chars of response
-        return False
+        
+        # If we get HTML, it might be the frontend - let's try the API URL directly
+        try:
+            api_response = requests.get(f"{API_URL}")
+            print("\nTrying API URL directly:")
+            print(f"Status Code: {api_response.status_code}")
+            api_data = api_response.json()
+            print("API Response:")
+            pprint(api_data)
+            
+            # Check required fields
+            for field in required_fields:
+                if field not in api_data:
+                    print(f"Missing required field: {field}")
+                    return False
+            
+            return True
+        except Exception as api_e:
+            print(f"Error with direct API call: {api_e}")
+            return False
 
 def test_products_list():
     """Test the products list endpoint"""
